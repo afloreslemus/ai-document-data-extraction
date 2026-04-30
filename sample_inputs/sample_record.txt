@@ -1,8 +1,0 @@
-Document Type: Invoice
-Name: Jordan Smith
-Date: 04/10/2026
-Record Number: INV-2026-104
-
-This sample file is included for the current project demo.
-It gives the pipeline text input to process while
-PDF and OCR support are still under development.

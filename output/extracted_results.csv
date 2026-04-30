@@ -1,2 +1,4 @@
-Source_File,Extraction_Status,Text_Method,Text_Characters,Name,Date,Document_Type,Record_Number
-sample_record.txt,Success,plain_text,246,Jordan Smith,04/10/2026,Invoice,INV-2026-104
+Source_File,Source_Path,Extraction_Status,Text_Method,Text_Characters,Name,Date,Document_Type,Record_Number,Amount,Organization,Status,Notes
+application_record.txt,C:\Users\User\OneDrive - Arkansas Tech University\ATU Grad\ai-document-data-extraction\data\input\application_record.txt,Success,plain_text,249,Luis Martinez,2026-04-22,Application,APP-2026-778,$75.00,River Valley Internship Program,Pending,Waiting for transcript review before final approval.
+invoice_record.txt,C:\Users\User\OneDrive - Arkansas Tech University\ATU Grad\ai-document-data-extraction\data\input\invoice_record.txt,Success,plain_text,216,Jordan Smith,2026-04-10,Invoice,INV-2026-104,"$1,250.00",Bright Star Supplies,Paid,Payment received in full for office equipment order.
+student_record.txt,C:\Users\User\OneDrive - Arkansas Tech University\ATU Grad\ai-document-data-extraction\data\input\student_record.txt,Success,plain_text,204,Maya Johnson,2026-03-15,Student Record,STU-22019,Not Found,Arkansas Tech University,Active,Enrolled in Advanced Python for the Spring term.

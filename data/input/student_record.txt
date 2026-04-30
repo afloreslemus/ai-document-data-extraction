@@ -1,0 +1,7 @@
+Document Type: Student Record
+Institution: Arkansas Tech University
+Student Name: Maya Johnson
+Date: 2026-03-15
+Student ID: STU-22019
+Status: Active
+Notes: Enrolled in Advanced Python for the Spring term.

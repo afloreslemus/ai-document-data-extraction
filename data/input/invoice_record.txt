@@ -1,0 +1,8 @@
+Document Type: Invoice
+Organization: Bright Star Supplies
+Name: Jordan Smith
+Date: 04/10/2026
+Record Number: INV-2026-104
+Status: Paid
+Amount Due: $1,250.00
+Notes: Payment received in full for office equipment order.

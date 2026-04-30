@@ -1,25 +1,51 @@
-# Project configuration for the document extraction pipeline.
+"""Project configuration for the document extraction pipeline."""
 
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
-
-# Demo input and output locations.
-INPUT_DIR = BASE_DIR / "sample_inputs"
+DATA_DIR = BASE_DIR / "data"
+INPUT_DIR = DATA_DIR / "input"
 OUTPUT_DIR = BASE_DIR / "output"
-OUTPUT_CSV = OUTPUT_DIR / "extracted_results.csv"
 
-# Supported file types for the current version. More can be added later.
-SUPPORTED_FILE_TYPES = [".txt", ".pdf"]
+CSV_OUTPUT_FILENAME = "extracted_results.csv"
+EXCEL_OUTPUT_FILENAME = "extracted_results.xlsx"
+OUTPUT_CSV = OUTPUT_DIR / CSV_OUTPUT_FILENAME
+OUTPUT_EXCEL = OUTPUT_DIR / EXCEL_OUTPUT_FILENAME
 
-# Fields currently extracted with simple rule-based logic.
+# Supported document types for the beginner-friendly extraction pipeline.
+SUPPORTED_FILE_TYPES = (".txt", ".pdf")
+DEFAULT_TEXT_ENCODING = "utf-8"
+
+# Fields extracted from each document.
 EXTRACTED_FIELDS = [
     "Name",
     "Date",
     "Document_Type",
     "Record_Number",
+    "Amount",
+    "Organization",
+    "Status",
+    "Notes",
 ]
 
-# Display defaults.
+# Fields written to exported output files.
+RESULT_FIELDS = [
+    "Source_File",
+    "Source_Path",
+    "Extraction_Status",
+    "Text_Method",
+    "Text_Characters",
+    *EXTRACTED_FIELDS,
+]
+
+# Known input date formats. Parsed dates are normalized to YYYY-MM-DD.
+DATE_INPUT_FORMATS = (
+    "%m/%d/%Y",
+    "%m-%d-%Y",
+    "%Y-%m-%d",
+    "%B %d, %Y",
+    "%b %d, %Y",
+)
+
 NOT_FOUND_VALUE = "Not Found"
-TEXT_PREVIEW_LENGTH = 180
+TEXT_PREVIEW_LENGTH = 160

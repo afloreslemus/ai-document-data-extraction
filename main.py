@@ -1,81 +1,86 @@
-# Main entry point for the AI Document Data Extraction project.
+"""Main CLI entry point for the AI Document Data Extraction project."""
 
 import argparse
 from pathlib import Path
 
-from config import (
-    EXTRACTED_FIELDS,
-    INPUT_DIR,
-    NOT_FOUND_VALUE,
-    OUTPUT_CSV,
-    SUPPORTED_FILE_TYPES,
-    TEXT_PREVIEW_LENGTH,
-)
-from export_results import export_results_to_csv, print_results
+from config import EXTRACTED_FIELDS, INPUT_DIR, NOT_FOUND_VALUE, TEXT_PREVIEW_LENGTH
+from config import SUPPORTED_FILE_TYPES
+from export_results import export_results, print_results
 from extract_fields import extract_fields
 from extract_text import extract_text_from_file
 
 
 def parse_arguments():
-    # Parse simple CLI arguments for the demo pipeline.
+    """Parse command-line options for the extraction pipeline."""
 
     parser = argparse.ArgumentParser(
-        description="Run the document extraction pipeline."
+        description="Run the AI Document Data Extraction pipeline."
     )
     parser.add_argument(
         "inputs",
         nargs="*",
-        help="Optional file paths or folders to process. If omitted, the sample_inputs folder is used.",
+        help=(
+            "Optional file paths or folders to process. "
+            "If omitted, the configured data/input folder is used."
+        ),
     )
     parser.add_argument(
         "--skip-export",
         action="store_true",
-        help="Run the pipeline without writing the CSV output file.",
+        help="Run the pipeline without creating CSV or Excel output files.",
     )
     return parser.parse_args()
 
 
 def discover_input_files(user_inputs):
-    # Find supported files from CLI inputs or the default sample input folder.
+    """Find supported files from CLI inputs or the configured input folder."""
 
-    if not user_inputs:
-        return _collect_supported_files(INPUT_DIR)
-
+    search_targets = [Path(value) for value in user_inputs] if user_inputs else [INPUT_DIR]
     discovered_files = []
+    missing_targets = []
+    unsupported_targets = []
 
-    for raw_input in user_inputs:
-        path = Path(raw_input)
-
-        if path.is_file() and path.suffix.lower() in SUPPORTED_FILE_TYPES:
-            discovered_files.append(path)
-        elif path.is_dir():
-            discovered_files.extend(_collect_supported_files(path))
+    for target in search_targets:
+        if target.is_file():
+            if _is_supported_file(target):
+                discovered_files.append(target.resolve())
+            else:
+                unsupported_targets.append(str(target))
+        elif target.is_dir():
+            discovered_files.extend(_collect_supported_files(target))
         else:
-            print(f"[WARN] Skipping unsupported or missing input: {raw_input}")
+            missing_targets.append(str(target))
 
-    # Remove duplicates while keeping output predictable.
-    return sorted(set(discovered_files))
+    unique_files = sorted(set(discovered_files))
+    return unique_files, missing_targets, unsupported_targets
 
 
 def _collect_supported_files(folder_path):
-    # Return supported files from a folder if it exists.
+    """Collect supported files from a folder and its subfolders."""
 
     folder_path = Path(folder_path)
     if not folder_path.exists():
         return []
 
     return sorted(
-        file_path
-        for file_path in folder_path.iterdir()
-        if file_path.is_file() and file_path.suffix.lower() in SUPPORTED_FILE_TYPES
+        file_path.resolve()
+        for file_path in folder_path.rglob("*")
+        if file_path.is_file() and _is_supported_file(file_path)
     )
 
 
+def _is_supported_file(file_path):
+    """Check whether the file extension is supported by the project."""
+
+    return Path(file_path).suffix.lower() in SUPPORTED_FILE_TYPES
+
+
 def build_result_row(file_path, text_result, field_result):
-    # Combine text extraction and field extraction into one export row.
+    """Combine extraction metadata and field values into one export row."""
 
     return {
         "Source_File": file_path.name,
+        "Source_Path": str(file_path),
         "Extraction_Status": "Success" if text_result["success"] else "Failed",
         "Text_Method": text_result["method"],
         "Text_Characters": len(text_result["text"]),
@@ -84,18 +89,21 @@ def build_result_row(file_path, text_result, field_result):
 
 
 def create_empty_field_result():
-    # Return placeholder values when extraction fails.
+    """Return placeholder values when field extraction cannot run."""
 
     return {field_name: NOT_FOUND_VALUE for field_name in EXTRACTED_FIELDS}
 
 
 def run_pipeline(input_files, skip_export=False):
-    # Process each input file from raw text extraction to structured output.
+    """Process each input file from text extraction to structured output."""
 
     results = []
+    total_files = len(input_files)
+
+    print(f"[INFO] Starting extraction pipeline for {total_files} file(s).")
 
     for index, file_path in enumerate(input_files, start=1):
-        print(f"\n[STEP {index}] Processing: {file_path.name}")
+        print(f"\n[{index}/{total_files}] Processing: {file_path.name}")
 
         text_result = extract_text_from_file(file_path)
         print(f"[INFO] {text_result['message']}")
@@ -103,51 +111,58 @@ def run_pipeline(input_files, skip_export=False):
         if text_result["success"]:
             cleaned_text = " ".join(text_result["text"].split())
             preview = cleaned_text[:TEXT_PREVIEW_LENGTH]
-            if cleaned_text:
-                ellipsis = "..." if len(cleaned_text) > TEXT_PREVIEW_LENGTH else ""
-                print(f"[PREVIEW] {preview}{ellipsis}")
-
+            ellipsis = "..." if len(cleaned_text) > TEXT_PREVIEW_LENGTH else ""
+            print(f"[PREVIEW] {preview}{ellipsis}")
             field_result = extract_fields(text_result["text"])
-            print("[INFO] Basic field extraction completed.")
+            print("[INFO] Field extraction completed.")
         else:
             field_result = create_empty_field_result()
-            print("[INFO] Field extraction skipped because no usable text was available.")
+            print("[WARN] Field extraction skipped because no usable text was available.")
 
         results.append(build_result_row(file_path, text_result, field_result))
 
     print_results(results)
 
-    if not skip_export and results:
-        output_path = export_results_to_csv(results, OUTPUT_CSV)
-        print(f"\n[INFO] Results exported to: {output_path}")
-    elif skip_export:
-        print("\n[INFO] CSV export was skipped by request.")
+    if skip_export:
+        print("\n[INFO] Export skipped by request.")
+        return results
 
-    print("\n[NOTE] This version is intentionally limited.")
-    print("[TODO] Add OCR, stronger PDF handling, more fields, and broader testing later.")
+    exported_paths = export_results(results)
+    if exported_paths["csv"]:
+        print(f"\n[INFO] CSV output: {exported_paths['csv']}")
+    if exported_paths["excel"]:
+        print(f"[INFO] Excel output: {exported_paths['excel']}")
+    else:
+        print("[INFO] Excel output skipped because openpyxl is not installed.")
 
     return results
 
 
 def main():
-    # Run the document extraction demo from the command line.
+    """Run the CLI pipeline."""
 
     args = parse_arguments()
 
-    print("=" * 60)
+    print("=" * 70)
     print("AI Document Data Extraction")
-    print("=" * 60)
+    print("=" * 70)
 
-    input_files = discover_input_files(args.inputs)
+    input_files, missing_targets, unsupported_targets = discover_input_files(args.inputs)
+
+    for missing_target in missing_targets:
+        print(f"[WARN] Missing file or folder skipped: {missing_target}")
+
+    for unsupported_target in unsupported_targets:
+        print(f"[WARN] Unsupported file skipped: {unsupported_target}")
 
     if not input_files:
         print(
             "[ERROR] No supported input files were found. "
-            "Add a .txt file to sample_inputs or pass a file path to main.py."
+            f"Add .txt or .pdf files to {INPUT_DIR} or pass file/folder paths on the command line."
         )
         return 1
 
-    print(f"[INFO] Found {len(input_files)} supported file(s).")
+    print(f"[INFO] Found {len(input_files)} supported input file(s).")
     run_pipeline(input_files, skip_export=args.skip_export)
     return 0
 
